@@ -29,9 +29,12 @@
 
 #include "parse.h"
 
+#include <sys/wait.h>
+
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
+static void handle_cmd(Command *cmd);
 
 int main(void)
 {
@@ -52,6 +55,7 @@ int main(void)
       if (parse(line, &cmd) == 1)
       {
         // Print the parsed command
+        handle_cmd(&cmd);
         print_cmd(&cmd);
       }
       else
@@ -65,6 +69,20 @@ int main(void)
   }
 
   return 0;
+}
+
+static void handle_cmd(Command *cmd_list) {
+  __pid_t pid = fork();
+
+  if (pid < 0) {
+    printf("Error\n");
+  } else if (pid == 0) {
+    // Command and stuff is found in pgmlist
+    execvp(*cmd_list->pgm->pgmlist, cmd_list->pgm->pgmlist);
+  } else {
+    wait(NULL);
+    printf("Complete\n");
+  }
 }
 
 /*

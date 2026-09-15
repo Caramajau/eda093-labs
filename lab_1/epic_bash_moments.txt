@@ -1,0 +1,3 @@
+Brukar finnas under en .bashrc vid root
+
+export PATH="/chalmers/users/davidmem/Documents/operatingsystem/rptree/"
