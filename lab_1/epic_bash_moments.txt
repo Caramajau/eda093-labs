@@ -1,3 +1,9 @@
 Brukar finnas under en .bashrc vid root
 
 export PATH="/chalmers/users/davidmem/Documents/operatingsystem/rptree/"
+
+Andra kommandon användbara:
+
+cmake -B build
+cmake --build build
+./build/lsh

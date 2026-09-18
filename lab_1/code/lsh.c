@@ -55,8 +55,8 @@ int main(void)
       if (parse(line, &cmd) == 1)
       {
         // Print the parsed command
-        handle_cmd(&cmd);
         print_cmd(&cmd);
+        handle_cmd(&cmd);
       }
       else
       {
@@ -76,11 +76,17 @@ static void handle_cmd(Command *cmd_list) {
 
   if (pid < 0) {
     printf("Error\n");
+
   } else if (pid == 0) {
     // Command and stuff is found in pgmlist
-    execvp(*cmd_list->pgm->pgmlist, cmd_list->pgm->pgmlist);
+    if (execvp(*cmd_list->pgm->pgmlist, cmd_list->pgm->pgmlist) == -1) {
+      printf("Error with: \n");
+      printf(*cmd_list->pgm->pgmlist);
+      printf("\n");
+    }
+    
   } else {
-    wait(NULL);
+    waitpid(pid, NULL, 0);
     printf("Complete\n");
   }
 }

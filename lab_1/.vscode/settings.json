@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/chalmers/users/davidmem/Documents/operatingsystem/eda093-labs/lab_1/code"
+    "cmake.sourceDirectory": "/chalmers/users/davidmem/Documents/operatingsystem/eda093-labs/lab_1/code",
+    "sonarlint.pathToCompileCommands": "${workspaceFolder}/code/build/compile_commands.json"
 }
