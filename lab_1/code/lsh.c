@@ -31,6 +31,9 @@
 
 #include <sys/wait.h>
 
+#define READ_END 0
+#define WRITE_END 1
+
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
@@ -72,16 +75,49 @@ int main(void)
 }
 
 static void handle_cmd(Command *cmd_list) {
-  __pid_t pid = fork();
+  Pgm *current_program = cmd_list->pgm;
+
+  int fd[2];
+
+  // Important to create pipe before fork so the processes actually share the same pipe
+  if (pipe(fd[2]) == -1) {
+    printf("Pipe failed");
+    return;
+  }
+
+  pid_t pid = fork();
+  if (current_program->next != NULL) {
+    pid_t pid2 = fork();
+    if (pid2 < 0) {
+      printf("Error\n");
+
+    } else if (pid2 == 0) {
+      // Command and stuff is found in pgmlist
+      if (execvp(*current_program->next->pgmlist, current_program->next->pgmlist) == -1) {
+        printf("Error with: \n");
+        printf(*current_program->next->pgmlist);
+        printf("\n");
+      } else {
+        close(fd[READ_END]);
+        // Make pipe also get stuff that stdout would get I think
+        dup2(fd[WRITE_END], STDOUT_FILENO);
+        close(fd[WRITE_END]);
+      }
+      
+    } else {
+      waitpid(pid2, NULL, 0);
+      printf("Complete\n");
+    }
+  }
 
   if (pid < 0) {
     printf("Error\n");
 
   } else if (pid == 0) {
     // Command and stuff is found in pgmlist
-    if (execvp(*cmd_list->pgm->pgmlist, cmd_list->pgm->pgmlist) == -1) {
+    if (execvp(*current_program->pgmlist, current_program->pgmlist) == -1) {
       printf("Error with: \n");
-      printf(*cmd_list->pgm->pgmlist);
+      printf(*current_program->pgmlist);
       printf("\n");
     }
     
