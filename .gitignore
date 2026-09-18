@@ -50,3 +50,6 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+
+# The slash before should make it so that only root level .vscode/ is ignored
+/.vscode/
