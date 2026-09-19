@@ -1,0 +1,25 @@
+{
+    "MD007": {
+        "indent": 4
+    },
+    "MD013": false,
+    "MD024": {
+        "siblings_only": true
+    },
+    "MD032": false,
+    "MD033": {
+        "allowed_elements": [
+            "img",
+            "ins",
+            "sub",
+            "sup"
+        ],
+        "table_allowed_elements": [
+            "br",
+            "img",
+            "ins",
+            "sub",
+            "sup"
+        ]
+    }
+}
