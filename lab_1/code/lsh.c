@@ -80,6 +80,7 @@ static void handle_cmd(Command *cmd_list) {
   int number_of_children = 0;
 
   for (Pgm *program = cmd_list->pgm; program != NULL; program = program->next) {
+    // Initial setup with pipe and fork
     int pipe_fds[2];
     int in_fd = STDIN_FILENO;
 
@@ -94,6 +95,7 @@ static void handle_cmd(Command *cmd_list) {
 
     pid_t pid = fork();
 
+    // Error
     if (pid < 0) {
       perror("fork");
       
@@ -105,6 +107,7 @@ static void handle_cmd(Command *cmd_list) {
 
       break;
 
+    // Child
     } else if (pid == 0) {
       if (in_fd != STDIN_FILENO) {
         dup2(in_fd, STDIN_FILENO);
@@ -113,13 +116,16 @@ static void handle_cmd(Command *cmd_list) {
         dup2(out_fd, STDOUT_FILENO);
       }
 
-      // Close pipe fd, otherwise readers never see EOF?
+      // Close pipe fds so readers won't get stuck
       if (program->next != NULL) {
+        // pipe_fd for read end redundant now as in_fd will have it except for when next is NULL (there you want the stdin)
         close(pipe_fds[READ_END]);
+        // Very important as child reads from this one
         close(pipe_fds[WRITE_END]);
       }
 
       if (out_fd != STDOUT_FILENO) {
+        // No need to keep as the write end has been redirected
         close(out_fd);
       }
 
@@ -129,11 +135,12 @@ static void handle_cmd(Command *cmd_list) {
       // Don't fall back into the shell loop?
        _exit(1);
   
+    // Parent
     } else {
       // Fork succeeded so increment
       number_of_children++;
 
-      // Child has its own copy now?
+      // Child has its own copy so this one is unnecessary and should be closed so reader won't get stuck
       if (out_fd != STDOUT_FILENO) {
         close(out_fd);
       }
