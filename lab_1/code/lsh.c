@@ -38,6 +38,7 @@ static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
 static void handle_cmd(Command *cmd);
+static void handle_program(Pgm *program, Pgm *caller_program) ;
 
 int main(void)
 {
@@ -80,7 +81,7 @@ static void handle_cmd(Command *cmd_list) {
   int fd[2];
 
   // Important to create pipe before fork so the processes actually share the same pipe
-  if (pipe(fd[2]) == -1) {
+  if (pipe(fd) == -1) {
     printf("Pipe failed");
     return;
   }
@@ -122,6 +123,53 @@ static void handle_cmd(Command *cmd_list) {
     }
     
   } else {
+    waitpid(pid, NULL, 0);
+    printf("Complete\n");
+  }
+}
+
+static void handle_program(Pgm *program, Pgm *caller_program) {
+  int pipe_fds[2];
+
+  // Important to create pipe before fork so the processes actually share the same pipe
+  if (pipe(pipe_fds) == -1) {
+    printf("Pipe failed");
+    return;
+  }
+
+  pid_t pid = fork();
+
+  if (pid < 0) {
+    printf("PID Error\n");
+
+  } else if (pid == 0) {
+    // Don't do the redirect for the "first" program
+    if (caller_program != NULL) {
+      // Prepare to also write to pipe (even if there may be no one reading it)
+      close(pipe_fds[READ_END]);
+      // Make pipe also get stuff that stdout would get I think
+      dup2(pipe_fds[WRITE_END], STDOUT_FILENO);
+      close(pipe_fds[WRITE_END]);
+    }
+
+
+    if (program->next != NULL) {
+      handle_program(program->next, program);
+    }
+
+    // Command and stuff is found in pgmlist
+    if (execvp(*program->pgmlist, program->pgmlist) == -1) {
+      printf("Exec error with: \n");
+      printf(*program->pgmlist);
+      printf("\n");
+    }
+    
+  } else {
+    if (caller_program != NULL) {
+      close(pipe_fds[WRITE_END]);
+      close(pipe_fds[READ_END]);
+    }
+
     waitpid(pid, NULL, 0);
     printf("Complete\n");
   }
