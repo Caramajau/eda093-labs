@@ -53,3 +53,6 @@ dkms.conf
 
 # The slash before should make it so that only root level .vscode/ is ignored
 /.vscode/
+
+# Ignore the annoying top level build
+build/

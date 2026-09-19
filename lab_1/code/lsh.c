@@ -86,7 +86,7 @@ static void handle_cmd(Command *cmd_list) {
     // Configure pipe for all, but the "first" program
     if (program->next != NULL) {
       if (pipe(pipe_fds) < 0) {
-        printf("Pipe error");
+        perror("pipe");
         break;
       }
       in_fd = pipe_fds[READ_END];
@@ -95,7 +95,7 @@ static void handle_cmd(Command *cmd_list) {
     pid_t pid = fork();
 
     if (pid < 0) {
-      printf("Fork error");
+      perror("fork");
       
       // If a pipe was created close it if fork errors
       if (program->next != NULL) {
@@ -123,13 +123,12 @@ static void handle_cmd(Command *cmd_list) {
         close(out_fd);
       }
 
-      if (execvp(*program->pgmlist, program->pgmlist) == -1) {
-        printf("Exec error with: \n");
-        printf(*program->pgmlist);
-        printf("\n");
-
-        _exit(1); // Don't fall back into the shell loop?
-      }
+      execvp(program->pgmlist[0], program->pgmlist);
+      // Code after exec only runs if it fails
+      perror(program->pgmlist[0]);
+      // Don't fall back into the shell loop?
+       _exit(1);
+  
     } else {
       // Fork succeeded so increment
       number_of_children++;

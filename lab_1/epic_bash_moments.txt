@@ -7,3 +7,6 @@ Andra kommandon användbara:
 cmake -B build
 cmake --build build
 ./build/lsh
+
+cmake -B build && cmake --build build
+./build/lsh
