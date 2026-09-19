@@ -31,6 +31,9 @@
 
 #include <sys/wait.h>
 
+#define READ_END 0
+#define WRITE_END 1
+
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
@@ -72,22 +75,83 @@ int main(void)
 }
 
 static void handle_cmd(Command *cmd_list) {
-  __pid_t pid = fork();
+  int out_fd = STDOUT_FILENO;
 
-  if (pid < 0) {
-    printf("Error\n");
+  int number_of_children = 0;
 
-  } else if (pid == 0) {
-    // Command and stuff is found in pgmlist
-    if (execvp(*cmd_list->pgm->pgmlist, cmd_list->pgm->pgmlist) == -1) {
-      printf("Error with: \n");
-      printf(*cmd_list->pgm->pgmlist);
-      printf("\n");
+  for (Pgm *program = cmd_list->pgm; program != NULL; program = program->next) {
+    int pipe_fds[2];
+    int in_fd = STDIN_FILENO;
+
+    // Configure pipe for all, but the "first" program
+    if (program->next != NULL) {
+      if (pipe(pipe_fds) < 0) {
+        printf("Pipe error");
+        break;
+      }
+      in_fd = pipe_fds[READ_END];
     }
-    
-  } else {
-    waitpid(pid, NULL, 0);
-    printf("Complete\n");
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+      printf("Fork error");
+      
+      // If a pipe was created close it if fork errors
+      if (program->next != NULL) {
+        close(pipe_fds[READ_END]);
+        close(pipe_fds[WRITE_END]);
+      }
+
+      break;
+
+    } else if (pid == 0) {
+      if (in_fd != STDIN_FILENO) {
+        dup2(in_fd, STDIN_FILENO);
+      }
+      if (out_fd != STDOUT_FILENO) {
+        dup2(out_fd, STDOUT_FILENO);
+      }
+
+      // Close pipe fd, otherwise readers never see EOF?
+      if (program->next != NULL) {
+        close(pipe_fds[READ_END]);
+        close(pipe_fds[WRITE_END]);
+      }
+
+      if (out_fd != STDOUT_FILENO) {
+        close(out_fd);
+      }
+
+      if (execvp(*program->pgmlist, program->pgmlist) == -1) {
+        printf("Exec error with: \n");
+        printf(*program->pgmlist);
+        printf("\n");
+
+        _exit(1); // Don't fall back into the shell loop?
+      }
+    } else {
+      // Fork succeeded so increment
+      number_of_children++;
+
+      // Child has its own copy now?
+      if (out_fd != STDOUT_FILENO) {
+        close(out_fd);
+      }
+
+      if (program->next != NULL) {
+        // Parent never reads
+        close(pipe_fds[READ_END]);
+
+        // Next (earlier) program will write here
+        out_fd = pipe_fds[WRITE_END];
+      }
+    }
+  }
+
+  // Wait for all children
+  for (int i = 0; i < number_of_children; i++) {
+    wait(NULL);
   }
 }
 
