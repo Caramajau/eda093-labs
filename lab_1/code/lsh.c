@@ -30,6 +30,8 @@
 #include "parse.h"
 
 #include <sys/wait.h>
+#include <signal.h>
+#include <errno.h>
 
 #define READ_END 0
 #define WRITE_END 1
@@ -38,9 +40,18 @@ static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
 static void handle_cmd(Command *cmd);
+static void sigchld_handler(int sig);
 
 int main(void)
 {
+  struct sigaction sa = {0};
+
+  sa.sa_handler = sigchld_handler;
+  sigemptyset(&sa.sa_mask);
+  sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+  
+  sigaction(SIGCHLD, &sa, NULL);
+
   for (;;)
   {
     char *line;
@@ -72,6 +83,20 @@ int main(void)
   }
 
   return 0;
+}
+
+static void sigchld_handler(int sig) {
+  // Can cast to void to avoid warning about sig being unused
+  // https://stackoverflow.com/questions/10391031/defining-unused-parameters-in-c
+  (void)sig;
+
+  // In case handler comes in between some other thing
+  // Shouldn't override the errno of that
+  int saved_errno = errno;
+  // Reap zombies right now and then stop
+  while (waitpid(-1, NULL, WNOHANG) > 0) {}
+
+  errno = saved_errno;
 }
 
 static void handle_cmd(Command *cmd_list) {
@@ -166,9 +191,11 @@ static void handle_cmd(Command *cmd_list) {
     }
   }
 
-  // Wait for all children
-  for (int i = 0; i < number_of_children; i++) {
-    waitpid(pids[i], NULL, 0);
+  // Only wait for all children if it isn't background
+  if (!cmd_list->background) {
+    for (int i = 0; i < number_of_children; i++) {
+      waitpid(pids[i], NULL, 0);
+    }
   }
 }
 
