@@ -145,9 +145,11 @@ static void handle_cmd(Command *cmd_list) {
   
     // Parent
     } else {
-      // Fork succeeded so increment
-      number_of_children++;
+      // Fork succeeded, save pid...
       pids[number_of_children] = pid;
+      
+      // ...and increment
+      number_of_children++;
 
       // Child has its own copy so this one is unnecessary and should be closed so reader won't get stuck
       if (out_fd != STDOUT_FILENO) {
