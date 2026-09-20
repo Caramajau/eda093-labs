@@ -75,6 +75,14 @@ int main(void)
 }
 
 static void handle_cmd(Command *cmd_list) {
+  int number_of_programs = 0;
+
+  for (Pgm *program = cmd_list->pgm; program != NULL; program = program->next) {
+    number_of_programs++;
+  }
+
+  pid_t pids[number_of_programs];
+
   int out_fd = STDOUT_FILENO;
 
   int number_of_children = 0;
@@ -133,12 +141,13 @@ static void handle_cmd(Command *cmd_list) {
       // Code after exec only runs if it fails
       perror(program->pgmlist[0]);
       // Don't fall back into the shell loop?
-       _exit(1);
+      _exit(1);
   
     // Parent
     } else {
       // Fork succeeded so increment
       number_of_children++;
+      pids[number_of_children] = pid;
 
       // Child has its own copy so this one is unnecessary and should be closed so reader won't get stuck
       if (out_fd != STDOUT_FILENO) {
@@ -157,7 +166,7 @@ static void handle_cmd(Command *cmd_list) {
 
   // Wait for all children
   for (int i = 0; i < number_of_children; i++) {
-    wait(NULL);
+    waitpid(pids[i], NULL, 0);
   }
 }
 
