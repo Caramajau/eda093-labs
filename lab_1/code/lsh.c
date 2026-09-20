@@ -127,6 +127,11 @@ static void handle_cmd(Command *cmd_list) {
     if (strcmp(program_list[0], "exit") == 0) {
       int status = length(program_list) > 1 ? strtol(program_list[1], NULL, 10) : 0;
       exit(status);
+      
+    } else if (strcmp(program_list[0], "cd") == 0) {
+      char *new_path = length(program_list) > 1 ? program_list[1] : "";
+      chdir(new_path);
+      return;
     }
   } 
 
