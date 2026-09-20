@@ -57,6 +57,12 @@ int main(void)
     char *line;
     line = readline("> ");
 
+    // Line will be NULL for Ctrl+D
+    // Before stripwhite to avoid segmentation fault
+    if (line == NULL) {
+      exit(0);
+    }
+
     // Remove leading and trailing whitespace from the line
     stripwhite(line);
 
