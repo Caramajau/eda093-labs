@@ -39,7 +39,6 @@
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
-static void free_and_exit(char *line, int status_code);
 static void handle_cmd(Command *cmd);
 static void sigchld_handler(int sig);
 
@@ -61,15 +60,11 @@ int main(void)
     // Line will be NULL for Ctrl+D
     // Before stripwhite to avoid segmentation fault
     if (line == NULL) {
-      free_and_exit(line, 0);
+      exit(0);
     }
 
     // Remove leading and trailing whitespace from the line
     stripwhite(line);
-
-    if (strcmp(line, "exit") == 0) {
-      free_and_exit(line, 0);
-    }
 
     // If the stripped line is not blank
     if (*line)
@@ -96,11 +91,6 @@ int main(void)
   return 0;
 }
 
-static void free_and_exit(char *line, int status_code) {
-  free(line);
-  exit(status_code);
-}
-
 static void sigchld_handler(int sig) {
   // Can cast to void to avoid warning about sig being unused
   // https://stackoverflow.com/questions/10391031/defining-unused-parameters-in-c
@@ -115,12 +105,30 @@ static void sigchld_handler(int sig) {
   errno = saved_errno;
 }
 
+// https://stackoverflow.com/questions/42937456/find-length-of-array-of-strings-in-c
+static size_t length(char **my_strings) {
+  size_t count = 0;
+  while (my_strings[count] != NULL) {
+    ++count;
+  }
+  return count;
+}
+
 static void handle_cmd(Command *cmd_list) {
   int number_of_programs = 0;
 
   for (Pgm *program = cmd_list->pgm; program != NULL; program = program->next) {
     number_of_programs++;
   }
+  
+  if (number_of_programs == 1) {
+    char **program_list = cmd_list->pgm->pgmlist;
+
+    if (strcmp(program_list[0], "exit") == 0) {
+      int status = length(program_list) > 1 ? strtol(program_list[1], NULL, 10) : 0;
+      exit(status);
+    }
+  } 
 
   pid_t pids[number_of_programs];
 
