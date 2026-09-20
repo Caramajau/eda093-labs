@@ -32,6 +32,7 @@
 #include <sys/wait.h>
 #include <signal.h>
 #include <errno.h>
+#include <fcntl.h>
 
 #define READ_END 0
 #define WRITE_END 1
@@ -141,6 +142,15 @@ static void handle_cmd(Command *cmd_list) {
   pid_t pids[number_of_programs];
 
   int out_fd = STDOUT_FILENO;
+  if (cmd_list->rstdout != NULL) {
+
+    // Only needs to write, create if not exits, if exist overwrite content
+    out_fd = open(cmd_list->rstdout, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+    if (out_fd < 0) {
+      perror(cmd_list->rstdout);
+      return;
+    }
+  }
 
   int number_of_children = 0;
 
@@ -156,6 +166,14 @@ static void handle_cmd(Command *cmd_list) {
         break;
       }
       in_fd = pipe_fds[READ_END];
+    
+    // Only for the "first" program and if input file was specified
+    } else if (cmd_list->rstdin != NULL) {
+      // Only interested in reading
+      in_fd = open(cmd_list->rstdin, O_RDONLY);
+      if (in_fd < 0) {
+        perror(cmd_list->rstdin);
+      }
     }
 
     pid_t pid = fork();
@@ -181,10 +199,11 @@ static void handle_cmd(Command *cmd_list) {
         dup2(out_fd, STDOUT_FILENO);
       }
 
-      // Close pipe fds so readers won't get stuck
+      // Close in_fd (should also close pipe read end) and pipe write end so readers won't get stuck
+      if (in_fd != STDIN_FILENO) {
+        close(in_fd);
+      }
       if (program->next != NULL) {
-        // pipe_fd for read end redundant now as in_fd will have it except for when next is NULL (there you want the stdin)
-        close(pipe_fds[READ_END]);
         // Very important as child reads from this one
         close(pipe_fds[WRITE_END]);
       }
@@ -223,10 +242,12 @@ static void handle_cmd(Command *cmd_list) {
         close(out_fd);
       }
 
-      if (program->next != NULL) {
-        // Parent never reads
-        close(pipe_fds[READ_END]);
+      // Parent never reads
+      if (in_fd != STDIN_FILENO) {
+        close(in_fd);
+      }
 
+      if (program->next != NULL) {
         // Next (earlier) program will write here
         out_fd = pipe_fds[WRITE_END];
       }

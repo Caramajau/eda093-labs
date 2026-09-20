@@ -56,3 +56,6 @@ dkms.conf
 
 # Ignore the annoying top level build
 build/
+
+tmp.1
+tmp.2
