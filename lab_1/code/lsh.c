@@ -52,6 +52,9 @@ int main(void)
   
   sigaction(SIGCHLD, &sa, NULL);
 
+  // By should ignore Ctrl+C
+  signal(SIGINT, SIG_IGN);
+
   for (;;)
   {
     char *line;
@@ -189,6 +192,16 @@ static void handle_cmd(Command *cmd_list) {
       if (out_fd != STDOUT_FILENO) {
         // No need to keep as the write end has been redirected
         close(out_fd);
+      }
+
+      // All programs should not ignore SIGINT...
+      signal(SIGINT, SIG_DFL);
+
+      if (cmd_list->background) {
+        // ...but if it is in background program, CTRL+C should still be ignored.
+        // Solved by putting in different process group
+        // NOTE: Would maybe want to not have that all gets their own group
+        setpgrp();
       }
 
       execvp(program->pgmlist[0], program->pgmlist);
