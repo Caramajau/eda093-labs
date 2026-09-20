@@ -39,6 +39,7 @@
 static void print_cmd(Command *cmd);
 static void print_pgm(Pgm *p);
 void stripwhite(char *);
+static void free_and_exit(char *line, int status_code);
 static void handle_cmd(Command *cmd);
 static void sigchld_handler(int sig);
 
@@ -60,11 +61,15 @@ int main(void)
     // Line will be NULL for Ctrl+D
     // Before stripwhite to avoid segmentation fault
     if (line == NULL) {
-      exit(0);
+      free_and_exit(line, 0);
     }
 
     // Remove leading and trailing whitespace from the line
     stripwhite(line);
+
+    if (strcmp(line, "exit") == 0) {
+      free_and_exit(line, 0);
+    }
 
     // If the stripped line is not blank
     if (*line)
@@ -89,6 +94,11 @@ int main(void)
   }
 
   return 0;
+}
+
+static void free_and_exit(char *line, int status_code) {
+  free(line);
+  exit(status_code);
 }
 
 static void sigchld_handler(int sig) {
