@@ -53,7 +53,7 @@ int main(void)
   
   sigaction(SIGCHLD, &sa, NULL);
 
-  // By should ignore Ctrl+C
+  // By default should ignore Ctrl+C
   signal(SIGINT, SIG_IGN);
 
   for (;;)
