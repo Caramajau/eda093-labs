@@ -134,7 +134,9 @@ static void handle_cmd(Command *cmd_list) {
       
     } else if (strcmp(program_list[0], "cd") == 0) {
       char *new_path = length(program_list) > 1 ? program_list[1] : "";
-      chdir(new_path);
+      if (chdir(new_path) == -1) {
+        perror(new_path);
+      }
       return;
     }
   } 
