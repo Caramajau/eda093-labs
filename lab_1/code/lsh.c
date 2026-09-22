@@ -124,8 +124,10 @@ static void handle_cmd(Command *cmd_list) {
   for (Pgm *program = cmd_list->pgm; program != NULL; program = program->next) {
     number_of_programs++;
   }
+
+  Pgm *first_program = cmd_list->pgm;
   
-  if (number_of_programs == 1) {
+  if (first_program != NULL && first_program->pgmlist != NULL) {
     char **program_list = cmd_list->pgm->pgmlist;
 
     if (strcmp(program_list[0], "exit") == 0) {
@@ -133,7 +135,7 @@ static void handle_cmd(Command *cmd_list) {
       exit(status);
       
     } else if (strcmp(program_list[0], "cd") == 0) {
-      char *new_path = length(program_list) > 1 ? program_list[1] : "";
+      char *new_path = length(program_list) > 1 ? program_list[1] : getenv("HOME");
       if (chdir(new_path) == -1) {
         perror(new_path);
       }
@@ -228,7 +230,7 @@ static void handle_cmd(Command *cmd_list) {
       execvp(program->pgmlist[0], program->pgmlist);
       // Code after exec only runs if it fails
       perror(program->pgmlist[0]);
-      // Don't fall back into the shell loop?
+      // Don't fall back into the shell loop
       _exit(1);
   
     // Parent
