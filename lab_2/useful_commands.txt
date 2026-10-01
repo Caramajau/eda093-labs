@@ -1,0 +1,24 @@
+- TO BUILD ----------------------------------
+cd pintos/src/threads
+make
+
+- TO RUN ------------------------------------
+cd pintos/src/threads/build
+pintos run alarm-multiple
+
+(There are some other commands as well)
+
+- TO TEST -----------------------------------
+cd pintos/src/threads/build
+make check
+
+(There are some other commands as well)
+
+- TO SETUP STUFF ----------------------------
+
+export PATH=/chalmers/sw/unsup64/phc/b/pkg/bochs-2.6.6/bin:$HOME/pintos/src/utils:$PATH
+
+source $HOME/.bashrc
+
+chmod +x pintos/src/utils/pintos*
+chmod +x pintos/src/utils/backtrace
