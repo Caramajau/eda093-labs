@@ -60,3 +60,8 @@ build/
 tmp.1
 tmp.2
 tmp.3
+
+# Ignores from os_material repo root
+.DS_Store
+lab_2/pintos/.cproject
+lab_2/pintos/.project
