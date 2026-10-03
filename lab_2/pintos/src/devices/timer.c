@@ -191,9 +191,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
   for (struct list_elem *e = list_begin(&sleeping_threads); e != list_end(&sleeping_threads); e = list_next(e)) {
     struct thread *t = list_entry(e, struct thread, sleepelem);
     if (timer_elapsed (t->start_ticks) >= t->ticks) {
-      struct semaphore thread_sema = t->sema;
       list_remove(e);
-      sema_up(&thread_sema);
+      sema_up(&t->sema);
       break;
     }
   }
