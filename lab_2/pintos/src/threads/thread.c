@@ -98,10 +98,6 @@ thread_init (void)
   init_thread (initial_thread, "main", PRI_DEFAULT);
   initial_thread->status = THREAD_RUNNING;
   initial_thread->tid = allocate_tid ();
-
-  // Initial new fields
-  initial_thread->ticks = 0;
-  sema_init(&initial_thread->sema, 0);
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -473,6 +469,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  // Initial new fields
+  t->ticks = 0;
+  sema_init(&t->sema, 0);
   list_push_back (&all_list, &t->allelem);
 }
 
