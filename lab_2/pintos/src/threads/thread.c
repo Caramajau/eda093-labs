@@ -129,9 +129,9 @@ thread_tick (void)
   struct thread *t = thread_current ();
 
   /* Update statistics. */
-  if (t == idle_thread) {
+  if (t == idle_thread)
     idle_ticks++;
-  }
+
 #ifdef USERPROG
   else if (t->pagedir != NULL)
     user_ticks++;

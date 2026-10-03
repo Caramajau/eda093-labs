@@ -95,7 +95,7 @@ struct thread
     struct list_elem elem;              /* List element. */
     
     // New fields, one for keeping track of ticks and the other so that threads have their own semaphore
-    long long ticks;
+    int64_t ticks;
     struct semaphore sema;
     struct list_elem sleepelem;
 
