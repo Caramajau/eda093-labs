@@ -131,7 +131,6 @@ thread_tick (void)
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
-
 #ifdef USERPROG
   else if (t->pagedir != NULL)
     user_ticks++;
