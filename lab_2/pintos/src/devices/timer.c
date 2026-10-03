@@ -32,7 +32,6 @@ static void real_time_delay (int64_t num, int32_t denom);
 
 // Created fields
 static struct list sleeping_threads;
-static int64_t sleep_start;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
