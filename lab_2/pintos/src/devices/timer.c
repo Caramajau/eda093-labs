@@ -31,7 +31,7 @@ static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
 // Created fields
-static struct thread *sleeping_thread;
+static struct list sleeping_threads;
 static int64_t sleep_start;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
@@ -41,6 +41,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  list_init(&sleeping_threads);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -99,7 +100,8 @@ timer_sleep (int64_t ticks)
 
   struct thread *t = thread_current();
   t->ticks = ticks;
-  sleeping_thread = t;
+  struct list *tmp_pointer_sleeping_threads = &sleeping_threads;
+  list_insert(&tmp_pointer_sleeping_threads->tail, &t->sleepelem);
   sleep_start = timer_ticks();
   sema_down(&t->sema);
 
@@ -187,11 +189,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
-  if (sleeping_thread != NULL) {
-    if (timer_elapsed (sleep_start) > sleeping_thread->ticks) {
-      struct semaphore thread_sema = sleeping_thread->sema;
-      sleeping_thread = NULL;
+  for (struct list_elem *e = list_begin(&sleeping_threads); e != list_end(&sleeping_threads); e = list_next(e)) {
+    struct thread *t = list_entry(e, struct thread, sleepelem);
+    if (timer_elapsed (sleep_start) > t->ticks) {
+      struct semaphore thread_sema = t->sema;
+      list_remove(e);
       sema_up(&thread_sema);
+      break;
     }
   }
 }

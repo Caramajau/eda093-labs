@@ -97,6 +97,7 @@ struct thread
     // New fields, one for keeping track of ticks and the other so that threads have their own semaphore
     long long ticks;
     struct semaphore sema;
+    struct list_elem sleepelem;
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
