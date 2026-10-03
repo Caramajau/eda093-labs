@@ -32,7 +32,7 @@ static void real_time_delay (int64_t num, int32_t denom);
 
 // Created fields
 static struct thread *sleeping_thread;
-int64_t sleep_start;
+static int64_t sleep_start;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -97,10 +97,11 @@ timer_sleep (int64_t ticks)
     return;
   }
 
-  struct thread *tid = thread_current();
-  tid->ticks = ticks;
-  sleep_start = timer_ticks ();
-  sema_down(&tid->sema);
+  struct thread *t = thread_current();
+  t->ticks = ticks;
+  sleeping_thread = t;
+  sleep_start = timer_ticks();
+  sema_down(&t->sema);
 
   // int64_t start = timer_ticks ();
 
@@ -188,7 +189,9 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
   if (sleeping_thread != NULL) {
     if (timer_elapsed (sleep_start) > sleeping_thread->ticks) {
-      sema_up(&sleeping_thread->sema);
+      struct semaphore thread_sema = sleeping_thread->sema;
+      sleeping_thread = NULL;
+      sema_up(&thread_sema);
     }
   }
 }
