@@ -30,6 +30,10 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
+// Created fields
+static struct thread *sleeping_thread;
+int64_t sleep_start;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void
@@ -95,6 +99,7 @@ timer_sleep (int64_t ticks)
 
   struct thread *tid = thread_current();
   tid->ticks = ticks;
+  sleep_start = timer_ticks ();
   sema_down(&tid->sema);
 
   // int64_t start = timer_ticks ();
@@ -180,6 +185,12 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+
+  if (sleeping_thread != NULL) {
+    if (timer_elapsed (sleep_start) > sleeping_thread->ticks) {
+      sema_up(&sleeping_thread->sema);
+    }
+  }
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

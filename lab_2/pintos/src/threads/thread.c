@@ -59,11 +59,6 @@ static unsigned thread_ticks;   /* # of timer ticks since last yield. */
    Controlled by kernel command-line option "-o mlfqs". */
 bool thread_mlfqs;
 
-// Created fields
-static long long block_ticks;
-static long long blocked_ticks;
-static struct semaphore blocked_sema;
-
 static void kernel_thread (thread_func *, void *aux);
 
 static void idle (void *aux UNUSED);
@@ -143,15 +138,6 @@ thread_tick (void)
 #endif
   else
     kernel_ticks++;
-
-  if (blocked_ticks != -1) {
-    block_ticks++;
-    if (block_ticks == blocked_ticks) {
-      block_ticks = 0;
-      blocked_ticks = -1;
-      sema_down(&blocked_sema);
-    }
-  }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -243,12 +229,7 @@ thread_block (void)
   ASSERT (!intr_context ());
   ASSERT (intr_get_level () == INTR_OFF);
 
-  struct thread *t = thread_current ();
-
-  blocked_ticks = t->ticks;
-  blocked_sema = t->sema;
-
-  t->status = THREAD_BLOCKED;
+  thread_current ()->status = THREAD_BLOCKED;
   schedule ();
 }
 
