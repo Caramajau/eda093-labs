@@ -49,6 +49,7 @@ struct kernel_thread_frame
 static long long idle_ticks;    /* # of timer ticks spent idle. */
 static long long kernel_ticks;  /* # of timer ticks in kernel threads. */
 static long long user_ticks;    /* # of timer ticks in user programs. */
+static long long block_ticks;   /* # of timer ticks while blocked */
 
 /* Scheduling. */
 #define TIME_SLICE 4            /* # of timer ticks to give each thread. */
@@ -128,13 +129,17 @@ thread_tick (void)
 {
   struct thread *t = thread_current ();
 
+  if (t->status == THREAD_BLOCKED) {
+    block_ticks++;
+    if (block_ticks == t->ticks) {
+      block_ticks = 0;
+      sema_up(&t->sema);
+    }
+  }
+
   /* Update statistics. */
   if (t == idle_thread) {
     idle_ticks++;
-    if (idle_ticks == t->ticks) {
-      idle_ticks = 0;
-      sema_up(&t->sema);
-    }
   }
 #ifdef USERPROG
   else if (t->pagedir != NULL)
