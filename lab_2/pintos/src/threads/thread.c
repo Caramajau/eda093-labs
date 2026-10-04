@@ -471,6 +471,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   /* Initial new fields */
   t->ticks = 0;
+  t->start_ticks = 0;
   sema_init (&t->sema, 0);
   list_push_back (&all_list, &t->allelem);
 }
