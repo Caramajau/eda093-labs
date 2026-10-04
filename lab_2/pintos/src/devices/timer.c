@@ -97,6 +97,7 @@ timer_sleep (int64_t ticks)
     return;
   }
 
+  // Don't want the interrupt handler to modify sleeping_threads, while it is modified here
   intr_disable();
 
   struct thread *t = thread_current();
@@ -105,12 +106,6 @@ timer_sleep (int64_t ticks)
   list_insert(&tmp_pointer_sleeping_threads->tail, &t->sleepelem);
   t->start_ticks = timer_ticks();
   sema_down(&t->sema);
-
-  // int64_t start = timer_ticks ();
-
-  // ASSERT (intr_get_level () == INTR_ON);
-  // while (timer_elapsed (start) < ticks) 
-  //   thread_yield ();
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
