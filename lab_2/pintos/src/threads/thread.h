@@ -94,7 +94,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     
-    // New fields, one for keeping track of ticks and the other so that threads have their own semaphore
+    /* New fields */
     int64_t ticks;
     int64_t start_ticks;
     struct semaphore sema;

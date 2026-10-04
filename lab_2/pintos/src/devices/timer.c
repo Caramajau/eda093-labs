@@ -30,7 +30,7 @@ static void busy_wait (int64_t loops);
 static void real_time_sleep (int64_t num, int32_t denom);
 static void real_time_delay (int64_t num, int32_t denom);
 
-// Created fields
+/* Created fields */
 static struct list sleeping_threads;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
@@ -38,7 +38,7 @@ static struct list sleeping_threads;
 void
 timer_init (void) 
 {
-  list_init(&sleeping_threads);
+  list_init (&sleeping_threads);
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -97,15 +97,15 @@ timer_sleep (int64_t ticks)
     return;
   }
 
-  // Don't want the interrupt handler to modify sleeping_threads, while it is modified here
-  intr_disable();
+  /* Don't want the interrupt handler to modify sleeping_threads, while it is modified here */
+  intr_disable ();
 
-  struct thread *t = thread_current();
+  struct thread *t = thread_current ();
   t->ticks = ticks;
   struct list *tmp_pointer_sleeping_threads = &sleeping_threads;
-  list_insert(&tmp_pointer_sleeping_threads->tail, &t->sleepelem);
-  t->start_ticks = timer_ticks();
-  sema_down(&t->sema);
+  list_insert (&tmp_pointer_sleeping_threads->tail, &t->sleepelem);
+  t->start_ticks = timer_ticks ();
+  sema_down (&t->sema);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -185,11 +185,11 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
-  for (struct list_elem *e = list_begin(&sleeping_threads); e != list_end(&sleeping_threads); e = list_next(e)) {
-    struct thread *t = list_entry(e, struct thread, sleepelem);
+  for (struct list_elem *e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (e)) {
+    struct thread *t = list_entry (e, struct thread, sleepelem);
     if (timer_elapsed (t->start_ticks) >= t->ticks) {
-      list_remove(e);
-      sema_up(&t->sema);
+      list_remove (e);
+      sema_up (&t->sema);
     }
   }
 }
