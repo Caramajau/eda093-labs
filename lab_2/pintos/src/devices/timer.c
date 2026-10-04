@@ -32,6 +32,7 @@ static void real_time_delay (int64_t num, int32_t denom);
 
 // Created fields
 static struct list sleeping_threads;
+static struct semaphore mutex;
 
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
@@ -39,6 +40,7 @@ void
 timer_init (void) 
 {
   list_init(&sleeping_threads);
+  sema_init(&mutex, 1);
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
 }
@@ -100,8 +102,10 @@ timer_sleep (int64_t ticks)
   struct thread *t = thread_current();
   t->ticks = ticks;
   struct list *tmp_pointer_sleeping_threads = &sleeping_threads;
+  sema_down(&mutex);
   list_insert(&tmp_pointer_sleeping_threads->tail, &t->sleepelem);
   t->start_ticks = timer_ticks();
+  sema_up(&mutex);
   sema_down(&t->sema);
 
   // int64_t start = timer_ticks ();
@@ -188,14 +192,19 @@ timer_interrupt (struct intr_frame *args UNUSED)
   ticks++;
   thread_tick ();
 
+  if (!sema_try_down(&mutex)) {
+    return;
+  }
+
   for (struct list_elem *e = list_begin(&sleeping_threads); e != list_end(&sleeping_threads); e = list_next(e)) {
     struct thread *t = list_entry(e, struct thread, sleepelem);
     if (timer_elapsed (t->start_ticks) >= t->ticks) {
       list_remove(e);
       sema_up(&t->sema);
-      break;
     }
   }
+
+  sema_up(&mutex);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
