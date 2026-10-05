@@ -89,11 +89,39 @@ timer_elapsed (int64_t then)
 void
 timer_sleep (int64_t ticks) 
 {
-  int64_t start = timer_ticks ();
-
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  
+  /*
+   * If ticks provided is zero, input should be faulty, so we instantly return
+  */
+  if (ticks <= 0) return; 
+
+  /*
+   * We cannot call thread_block() without interrupts disabled
+   * So we disable interrupts, this also returns old interrupt level so we store that
+   * Fetch the current thread and sets it to current timer_tick + specified ticks
+   * Block the thread
+   * Put the interrupt level back after blocking the thread
+  */
+  enum intr_level old_level = intr_disable (); 
+  thread_current ()->wakeup_tick = timer_ticks () + ticks;
+  thread_block ();
+  intr_set_level (old_level);
+}
+
+/*
+Function to go through each thread
+Checks if status is THREAD_BLOCKED and if the wakeup_tick is less or equal to current ticks
+If it is, we set the wakeup_tick back to our sentinel and unblock thread
+*/
+static void
+timer_wakeup (struct thread *t, void *aux UNUSED)
+{
+  if (t->status == THREAD_BLOCKED && t->wakeup_tick <= ticks)
+  {
+    t->wakeup_tick = INT64_MAX;
+    thread_unblock (t);
+  }
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +200,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  thread_foreach (timer_wakeup, NULL); /* Run thread_foreach with our wakeup function. */
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

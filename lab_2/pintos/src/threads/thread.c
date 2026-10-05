@@ -469,6 +469,7 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+  t->wakeup_tick = INT64_MAX; /* Initialize wakeup_tick to sentinel value that is realistically unreachable */
   list_push_back (&all_list, &t->allelem);
 }
 
