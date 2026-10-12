@@ -198,13 +198,14 @@ void get_slot (const task_t *task) {
    * even if there are priority tasks of the other direction waiting
    */
   direction_t task_direction = task->direction;
-
+  
   lock_acquire(&bus_lock);
 
   while (current_count == 3 || (current_count > 0 && current_direction != task_direction)) {
-    list_insert(&waiting_to_go[task_direction].waiters.tail, &task->elem);
+    //list_push_back(&waiting_to_go[task_direction].waiters, &task->elem);
     cond_wait(&waiting_to_go[task_direction], &bus_lock);
-    list_remove(&task->elem);
+    // msg ("%s passed cond wait", thread_name());
+    //list_remove(&task->elem);
   }
 
   current_count++;
@@ -226,13 +227,17 @@ void release_slot (const task_t *task) {
 
   /* Lock bus again, because editing current count */
   lock_acquire(&bus_lock);
+
+  // msg ("%s exit slot", thread_name());
   current_count--;
 
   direction_t task_direction = task->direction;
 
   if (!list_empty(&waiting_to_go[task_direction].waiters)) {
+    // msg ("%s signal slot for same", thread_name());
     cond_signal(&waiting_to_go[task_direction], &bus_lock);
   } else if (current_count == 0) {
+    // msg ("%s broadcast slot for other", thread_name());
     cond_broadcast(&waiting_to_go[other_direction(task_direction)], &bus_lock);
   }
 
