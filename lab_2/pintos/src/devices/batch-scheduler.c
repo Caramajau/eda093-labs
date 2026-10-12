@@ -233,7 +233,7 @@ void release_slot (const task_t *task) {
 
   if (!list_empty(&waiting_to_go[task_direction].waiters)) {
     cond_signal(&waiting_to_go[task_direction], &bus_lock);
-  } else if (list_empty(&waiting_to_go[task_direction].waiters)) {
+  } else if (current_count == 0) {
     cond_broadcast(&waiting_to_go[other_direction(task_direction)], &bus_lock);
   }
 
