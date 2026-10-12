@@ -202,8 +202,7 @@ void get_slot (const task_t *task) {
   lock_acquire(&bus_lock);
 
   while (current_count == 3 || (current_count > 0 && current_direction != task_direction)) {
-    struct list *tmp_pointer = &waiting_to_go[task_direction].waiters;
-    list_insert(&tmp_pointer->tail, &task->elem);
+    list_insert(&waiting_to_go[task_direction].waiters.tail, &task->elem);
     cond_wait(&waiting_to_go[task_direction], &bus_lock);
     list_remove(&task->elem);
   }
