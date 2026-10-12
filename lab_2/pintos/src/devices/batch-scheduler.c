@@ -56,6 +56,11 @@ typedef struct {
   unsigned long transfer_duration;
 } task_t;
 
+static int current_count = 0;
+static direction_t current_direction = SEND;
+static struct lock bus_lock;
+static int waiting_to_go[2];
+
 void init_bus (void);
 void batch_scheduler (unsigned int num_priority_send,
                       unsigned int num_priority_receive,
@@ -82,6 +87,7 @@ void init_bus (void) {
 
   /* TODO: Initialize global/static variables,
      e.g. your condition variables, locks, counters etc */
+  lock_init(&bus_lock); 
 }
 
 void batch_scheduler (unsigned int num_priority_send,
@@ -188,6 +194,19 @@ void get_slot (const task_t *task) {
    * feel free to schedule priority tasks of the same direction,
    * even if there are priority tasks of the other direction waiting
    */
+  direction_t task_direction = task->direction;
+
+  lock_acquire(&bus_lock);
+
+  while (current_count == 3 || (current_count > 0 && current_direction != task_direction)) {
+    waiting_to_go[task_direction]++;
+    cond_wait(waiting_to_go[task_direction], &bus_lock);
+    waiting_to_go[task_direction]--;
+  }
+
+  current_count++;
+  current_direction = task_direction;
+  lock_release(&bus_lock);
 }
 
 void transfer_data (const task_t *task) {
@@ -201,4 +220,18 @@ void release_slot (const task_t *task) {
    *       - Do you need to notify any waiting task?
    *       - Do you need to increment/decrement any counter?
    */
+
+  /* Lock bus again, because editing current count */
+  lock_acquire(&bus_lock);
+  current_count--;
+
+  direction_t task_direction = task->direction;
+
+  if (waiting_to_go[task_direction] > 0) {
+    cond_signal(waiting_to_go[task_direction], &bus_lock);
+  } else if (current_count == 0) {
+    cond_broadcast(waiting_to_go[other_direction(task_direction)], &bus_lock);
+  }
+
+  lock_release(&bus_lock);
 }
