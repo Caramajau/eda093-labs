@@ -54,12 +54,13 @@ typedef struct {
   direction_t direction;
   priority_t priority;
   unsigned long transfer_duration;
+  struct list_elem elem;
 } task_t;
 
 static int current_count = 0;
 static direction_t current_direction = SEND;
 static struct lock bus_lock;
-static int waiting_to_go[2];
+static struct condition waiting_to_go[2];
 
 void init_bus (void);
 void batch_scheduler (unsigned int num_priority_send,
@@ -87,7 +88,9 @@ void init_bus (void) {
 
   /* TODO: Initialize global/static variables,
      e.g. your condition variables, locks, counters etc */
-  lock_init(&bus_lock); 
+  lock_init(&bus_lock);
+  cond_init(&waiting_to_go[0]);
+  cond_init(&waiting_to_go[1]);
 }
 
 void batch_scheduler (unsigned int num_priority_send,
@@ -199,9 +202,10 @@ void get_slot (const task_t *task) {
   lock_acquire(&bus_lock);
 
   while (current_count == 3 || (current_count > 0 && current_direction != task_direction)) {
-    waiting_to_go[task_direction]++;
-    cond_wait(waiting_to_go[task_direction], &bus_lock);
-    waiting_to_go[task_direction]--;
+    struct list *tmp_pointer = &waiting_to_go[task_direction].waiters;
+    list_insert(&tmp_pointer->tail, &task->elem);
+    cond_wait(&waiting_to_go[task_direction], &bus_lock);
+    list_remove(&task->elem);
   }
 
   current_count++;
@@ -227,10 +231,10 @@ void release_slot (const task_t *task) {
 
   direction_t task_direction = task->direction;
 
-  if (waiting_to_go[task_direction] > 0) {
-    cond_signal(waiting_to_go[task_direction], &bus_lock);
-  } else if (current_count == 0) {
-    cond_broadcast(waiting_to_go[other_direction(task_direction)], &bus_lock);
+  if (!list_empty(&waiting_to_go[task_direction].waiters)) {
+    cond_signal(&waiting_to_go[task_direction], &bus_lock);
+  } else if (list_empty(&waiting_to_go[task_direction].waiters)) {
+    cond_broadcast(&waiting_to_go[other_direction(task_direction)], &bus_lock);
   }
 
   lock_release(&bus_lock);
