@@ -260,7 +260,9 @@ void release_slot (const task_t *task) {
     cond_signal(&waiting_to_go[task_direction], &bus_lock);
   } else if (current_count == 0) {
     // msg ("%s broadcast slot for other", thread_name());
-    cond_broadcast(&waiting_to_go[other_direction(task_direction)], &bus_lock);
+
+    /* Had to change from broadcast to work */
+    cond_signal(&waiting_to_go[other_direction(task_direction)], &bus_lock);
   }
 
   lock_release(&bus_lock);
