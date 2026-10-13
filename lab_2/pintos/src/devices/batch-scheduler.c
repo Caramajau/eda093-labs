@@ -54,7 +54,6 @@ typedef struct {
   direction_t direction;
   priority_t priority;
   unsigned long transfer_duration;
-  struct list_elem elem;
 } task_t;
 
 static int current_count = 0;
@@ -202,10 +201,8 @@ void get_slot (const task_t *task) {
   lock_acquire(&bus_lock);
 
   while (current_count == 3 || (current_count > 0 && current_direction != task_direction)) {
-    //list_push_back(&waiting_to_go[task_direction].waiters, &task->elem);
     cond_wait(&waiting_to_go[task_direction], &bus_lock);
     // msg ("%s passed cond wait", thread_name());
-    //list_remove(&task->elem);
   }
 
   current_count++;
