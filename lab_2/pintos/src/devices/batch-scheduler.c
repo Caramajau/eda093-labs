@@ -59,7 +59,7 @@ typedef struct {
 static int current_count = 0;
 static direction_t current_direction = SEND;
 static struct lock bus_lock;
-static struct condition waiting_to_go[2];
+static struct condition waiting_to_go[4];
 
 void init_bus (void);
 void batch_scheduler (unsigned int num_priority_send,
@@ -90,6 +90,8 @@ void init_bus (void) {
   lock_init(&bus_lock);
   cond_init(&waiting_to_go[0]);
   cond_init(&waiting_to_go[1]);
+  cond_init(&waiting_to_go[2]);
+  cond_init(&waiting_to_go[3]);
 }
 
 void batch_scheduler (unsigned int num_priority_send,
@@ -183,6 +185,15 @@ static direction_t other_direction(direction_t this_direction) {
   return this_direction == SEND ? RECEIVE : SEND;
 }
 
+/* 0 - normal send
+ * 1 - normal receive
+ * 2 - priority send
+ * 3 - priority receive 
+ */
+static int get_task_index(const task_t *task) {
+  return 2 * task->priority + task->direction;
+}
+
 void get_slot (const task_t *task) {
 
   /* TODO: Try to get a slot, respect the following rules:
@@ -197,11 +208,14 @@ void get_slot (const task_t *task) {
    * even if there are priority tasks of the other direction waiting
    */
   direction_t task_direction = task->direction;
-  
+  priority_t task_prio = task->priority;
+
+  int task_index = get_task_index(task);
+
   lock_acquire(&bus_lock);
 
-  while (current_count == 3 || (current_count > 0 && current_direction != task_direction)) {
-    cond_wait(&waiting_to_go[task_direction], &bus_lock);
+  while (current_count == 3 || (current_count > 0 && current_direction != task_direction) || (task_prio == NORMAL && ((!list_empty(&waiting_to_go[2].waiters)) || (!list_empty(&waiting_to_go[3].waiters))))) {
+    cond_wait(&waiting_to_go[task_index], &bus_lock);
     // msg ("%s passed cond wait", thread_name());
   }
 
@@ -230,7 +244,18 @@ void release_slot (const task_t *task) {
 
   direction_t task_direction = task->direction;
 
-  if (!list_empty(&waiting_to_go[task_direction].waiters)) {
+  int prio_index_same = 2 + task_direction;
+  int prio_index_other = 2 + other_direction(task_direction);
+
+  if (!list_empty(&waiting_to_go[prio_index_same].waiters)) {
+    cond_signal(&waiting_to_go[prio_index_same], &bus_lock);
+
+  } else if (!list_empty(&waiting_to_go[prio_index_other].waiters)) {
+    if (current_count == 0) {
+      cond_broadcast(&waiting_to_go[prio_index_other], &bus_lock);
+    }
+
+  } else if (!list_empty(&waiting_to_go[task_direction].waiters)) {
     // msg ("%s signal slot for same", thread_name());
     cond_signal(&waiting_to_go[task_direction], &bus_lock);
   } else if (current_count == 0) {
